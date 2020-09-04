@@ -43,25 +43,20 @@ public class NewClass {
     
     public static void main(String[] args)
     {
-       
-
-        //pdf_table_of_contens("test.pdf");
-        
         String path = "files/";
-        
+
+        pdf_first_page("first_page.pdf"); 
         String[] source_filenames = fetch_all_files(path);
         svg_to_pdf(source_filenames);
         text_to_pdf(source_filenames);        
-        merge_pdf(source_filenames);
-        
+        merge_pdf(source_filenames);    
     }
+    
     public static String[] fetch_all_files(String folder_path)
     {
-        
         File folder = new File(folder_path);
         FileFilter fileFilter = new WildcardFileFilter("*.SVG", IOCase.INSENSITIVE);
         File[] listOfFiles = folder.listFiles(fileFilter);
-
         String[] file_name_list = new String[listOfFiles.length];
             
         for (int i = 0; i < listOfFiles.length; i++)
@@ -72,11 +67,40 @@ public class NewClass {
                 tmp = FilenameUtils.removeExtension(tmp);
                 file_name_list[i] = folder_path + tmp;
             }
-        }
-        
+        }       
         return file_name_list;
     }    
     
+    public static void pdf_first_page(String filename)
+    {
+        try
+        {
+            //Loading an existing document 
+            PDDocument doc = new PDDocument();
+            PDPage page = new PDPage();
+            doc.addPage(page); 
+            page.setMediaBox(PDRectangle.A4);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page, AppendMode.OVERWRITE, false);
+
+            //Begin the Content stream 
+            contentStream.beginText(); 
+            contentStream.setFont( PDType1Font.TIMES_ROMAN, 16 ); 
+            contentStream.newLineAtOffset(25, page.getMediaBox().getHeight());
+            contentStream.newLineAtOffset(0, -25 );
+            contentStream.showText("TITLE"); 
+            contentStream.endText(); 
+
+            //Closing
+            contentStream.close();      
+            doc.save(new File(filename)); 
+            doc.close();
+            
+        }
+        catch (IOException ex)
+        {
+            Logger.getLogger(NewClass.class.getName()).log(Level.SEVERE, null, ex);
+        }       
+    }
     
     public static void pdf_table_of_contens(String source_filename)
     {   
@@ -226,6 +250,7 @@ public class NewClass {
         {
             PDFMergerUtility merge = new PDFMergerUtility();
 
+            merge.addSource("first_page.pdf");    
             for (String pdf_filename : pdf_filenames)
             {
                 merge.addSource(new File(pdf_filename + "_PDF_TMP.pdf"));
