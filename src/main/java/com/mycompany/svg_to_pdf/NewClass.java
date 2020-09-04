@@ -6,6 +6,7 @@
 package com.mycompany.svg_to_pdf;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -17,6 +18,9 @@ import org.apache.batik.transcoder.Transcoder;
 import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOCase;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.fop.svg.PDFTranscoder;        
 import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
@@ -27,6 +31,9 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;  
+import org.apache.pdfbox.pdmodel.interactive.action.PDActionGoTo;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink;
+import org.apache.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPageXYZDestination;
 
 /**
  *
@@ -37,15 +44,81 @@ public class NewClass {
     public static void main(String[] args)
     {
        
-        String[] source_filenames = {   "files/bzr",
-                                        "files/circles1",
-                                        //"files/car",
-        };
+
+        //pdf_table_of_contens("test.pdf");
         
+        String path = "files/";
+        
+        String[] source_filenames = fetch_all_files(path);
         svg_to_pdf(source_filenames);
         text_to_pdf(source_filenames);        
         merge_pdf(source_filenames);
         
+    }
+    public static String[] fetch_all_files(String folder_path)
+    {
+        
+        File folder = new File(folder_path);
+        FileFilter fileFilter = new WildcardFileFilter("*.SVG", IOCase.INSENSITIVE);
+        File[] listOfFiles = folder.listFiles(fileFilter);
+
+        String[] file_name_list = new String[listOfFiles.length];
+            
+        for (int i = 0; i < listOfFiles.length; i++)
+        {
+            if (listOfFiles[i].isFile())
+            {
+                String tmp = listOfFiles[i].getName();
+                tmp = FilenameUtils.removeExtension(tmp);
+                file_name_list[i] = folder_path + tmp;
+            }
+        }
+        
+        return file_name_list;
+    }    
+    
+    
+    public static void pdf_table_of_contens(String source_filename)
+    {   
+        try
+        {        
+            // there are other types of destinations, choose what is appropriate
+            PDPageXYZDestination dest = new PDPageXYZDestination();
+            // the indexing is odd here.  if you are doing this on the first page of the pdf
+            // that page is -1, the next is 0, the next is 1 and so on.  odd.
+            dest.setPageNumber(3);
+            dest.setLeft(0);
+            dest.setTop(0); // link to top of page, this is the XYZ part
+
+            PDActionGoTo action = new PDActionGoTo();
+            action.setDestination(dest);
+
+            PDAnnotationLink link = new PDAnnotationLink();
+            link.setAction(action);
+            link.setDestination(dest);
+
+            PDRectangle rect = new PDRectangle();
+            // just making these x,y coords up for sample
+            rect.setLowerLeftX(72);
+            rect.setLowerLeftY(600);
+            rect.setUpperRightX(144);
+            rect.setUpperRightY(620);
+
+            PDDocument doc = PDDocument.load(new File(source_filename)); 
+            PDPage page = doc.getPage(0);// however you are getting your table of contents page, eg new PDPage() or doc.getDocumentCatalog().getAllPages().get(0)
+
+            page.getAnnotations().add(link);
+
+            PDPageContentStream stream = new PDPageContentStream(doc, page, true, true);
+            stream.beginText();
+            stream.setTextTranslation(85, 600); // made these up, have to test to see if padding is correct
+            stream.drawString("Page 1");
+            stream.endText();
+            stream.close();
+            
+        } catch (IOException ex) {
+            Logger.getLogger(NewClass.class.getName()).log(Level.SEVERE, null, ex);
+        }        
     }
     
     public static void svg_to_pdf(String[] source_filenames)
@@ -57,7 +130,8 @@ public class NewClass {
 
             // set the scale for the SVG
             transcoder.addTranscodingHint(PDFTranscoder.KEY_HEIGHT, (float)1122.52);
-            transcoder.addTranscodingHint(PDFTranscoder.KEY_WIDTH, (float)793.70);
+            transcoder.addTranscodingHint(PDFTranscoder.KEY_WIDTH, (float)793.70);            
+            //transcoder.addTranscodingHint(PDFTranscoder.KEY_USER_STYLESHEET_URI, (float)1122);
             
             for (String source_filename : source_filenames)
             {
@@ -148,7 +222,8 @@ public class NewClass {
     
     public static void merge_pdf(String[] pdf_filenames)
     {   
-        try {
+        try
+        {
             PDFMergerUtility merge = new PDFMergerUtility();
 
             for (String pdf_filename : pdf_filenames)
@@ -162,9 +237,10 @@ public class NewClass {
             //MemoryUsageSetting memsetting = new MemoryUsageSetting();
             //ut.mergeDocuments(memsetting);
         
-        } catch (IOException ex) {
+        }
+        catch (IOException ex)
+        {
             Logger.getLogger(NewClass.class.getName()).log(Level.SEVERE, null, ex);
         }            
-
     }
 }
