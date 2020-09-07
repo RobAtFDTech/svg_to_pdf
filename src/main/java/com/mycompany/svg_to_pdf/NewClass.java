@@ -43,13 +43,14 @@ public class NewClass {
     
     public static void main(String[] args)
     {
-        String path = "files/";
+        String path = "/media/sf_SHARE/svg/";
 
-        pdf_first_page("first_page.pdf"); 
         String[] source_filenames = fetch_all_files(path);
+        pdf_first_page("first_page.pdf", source_filenames);
+        //System.exit(0);
         svg_to_pdf(source_filenames);
         text_to_pdf(source_filenames);        
-        merge_pdf(source_filenames);    
+        merge_pdf(source_filenames);
     }
     
     public static String[] fetch_all_files(String folder_path)
@@ -71,7 +72,7 @@ public class NewClass {
         return file_name_list;
     }    
     
-    public static void pdf_first_page(String filename)
+    public static void pdf_first_page(String front_page, String[] source_filenames)
     {
         try
         {
@@ -88,13 +89,26 @@ public class NewClass {
             contentStream.newLineAtOffset(25, page.getMediaBox().getHeight());
             contentStream.newLineAtOffset(0, -25 );
             contentStream.showText("TITLE"); 
+            
+            // table of contents
+            contentStream.newLineAtOffset(0, -50 );
+            contentStream.showText("Table of Contents"); 
+            contentStream.newLineAtOffset(0, -20 );
+            
+	    //add each filename
+            contentStream.setFont( PDType1Font.TIMES_ROMAN, 8 ); 
+            int index=1; // the diagrams start from the next page.
+	    for (String source_filename : source_filenames)
+            {
+                contentStream.showText(String.valueOf(index++) + "... " + FilenameUtils.getBaseName(source_filename));
+                contentStream.newLineAtOffset(0, -12 );
+            }
             contentStream.endText(); 
 
             //Closing
             contentStream.close();      
-            doc.save(new File(filename)); 
+            doc.save(new File(front_page)); 
             doc.close();
-            
         }
         catch (IOException ex)
         {
@@ -183,10 +197,11 @@ public class NewClass {
     {
 
         try {
-            
+            int page_number = 1;
             for(String pdf_filename : pdf_filenames)
             {
                 String full_file_name = pdf_filename + "_PDF_TMP.pdf";
+                String basic_name = FilenameUtils.getBaseName(pdf_filename);                        
                 
                 //Loading an existing document 
                 PDDocument doc = PDDocument.load(new File(full_file_name)); 
@@ -201,27 +216,16 @@ public class NewClass {
                 //Begin the Content stream 
                 contentStream.beginText(); 
 
-                //Setting the font to the Content stream  
+                // The text starts at the bottom and is written upwards.
+                // write the page number. At the bottom
+                contentStream.setFont( PDType1Font.TIMES_ROMAN, 10 ); 
+                contentStream.newLineAtOffset(25, 20 );
+                contentStream.showText("Page " + String.valueOf(page_number++));
+                
+                // write the title. In this case, the filename. At the top.
                 contentStream.setFont( PDType1Font.TIMES_ROMAN, 16 ); 
-
-//                System.out.println(page.getMediaBox().getHeight());
-//                System.out.println(page.getMediaBox().getWidth());
-
-                // set text position
-                contentStream.newLineAtOffset(25, page.getMediaBox().getHeight());
-
-
-                // Write title
-                contentStream.newLineAtOffset(0, -25 );
-                contentStream.showText(pdf_filename); 
-
-
-                //Setting the position for the line 
-                contentStream.newLineAtOffset(0, -400); 
-                String text = "This is an example of adding text to a page in the pdf document. we can add as many lines as we want like this using the draw string method of the ContentStream class"; 
-
-                //Adding text in the form of string 
-                contentStream.showText(text); 
+                contentStream.newLineAtOffset(0, (page.getMediaBox().getHeight() - 50));
+                contentStream.showText(basic_name);
 
                 //Ending the content stream 
                 contentStream.endText(); 
